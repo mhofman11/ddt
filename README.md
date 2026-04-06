@@ -3,6 +3,7 @@
 **Live demo:**  
 https://mhofman11.github.io/ddt/
 
+![DDT interface](screenshot.png)
 ---
 
 ## Core Insight
