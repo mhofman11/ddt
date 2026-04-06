@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dietary Destabilization Triangle — Intake</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #F7F8F7; color: #1F2933; }
+  .container { max-width: 720px; margin: 0 auto; padding: 20px; }
+
+  /* Step navigation */
+  .step-bar { display: flex; gap: 4px; margin-bottom: 24px; }
+  .step-pip { flex: 1; height: 6px; border-radius: 3px; background: #E5E7EB; transition: background 0.3s; }
+  .step-pip.done { background: #2F3E46; }
+  .step-pip.active { background: #5B8A72; }
+
+  /* Cards */
+  .card { background: #FFFFFF; border-radius: 8px; padding: 24px; border: 1px solid #E5E7EB; margin-bottom: 16px; }
+  .card-title { font-size: 16px; font-weight: 700; color: #2F3E46; margin-bottom: 4px; }
+  .card-subtitle { font-size: 12px; color: #6B7280; margin-bottom: 16px; }
+
+  /* Form elements */
+  .field { margin-bottom: 22px; }
+  .field-label { font-size: 13px; font-weight: 600; color: #1F2933; margin-bottom: 3px; }
+  .field-help { font-size: 11px; color: #6B7280; margin-bottom: 6px; }
+  .field select, .field input[type="number"] {
+    width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #E5E7EB; font-size: 13px;
+  }
+  input[type="range"] { width: 100%; accent-color: #5B8A72; cursor: pointer; }
+
+  /* Likert buttons */
+  .likert { display: flex; gap: 4px; }
+  .likert button {
+    flex: 1; padding: 7px 2px; border-radius: 6px; font-size: 11px; text-align: center;
+    border: 1.5px solid #E5E7EB; background: #FFFFFF; color: #6B7280; cursor: pointer; transition: all 0.15s;
+  }
+  .likert button.active { font-weight: 700; border-color: #2F3E46; background: #F0F2F1; color: #2F3E46; }
+
+  /* Hunger entries */
+  .hunger-entry { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; padding: 8px; background: #FAFBFA; border-radius: 6px; border: 1px solid #E5E7EB; }
+  .hunger-entry select { flex: 1; padding: 5px 6px; border-radius: 4px; border: 1px solid #E5E7EB; font-size: 12px; }
+  .hunger-entry .intensity-btns { display: flex; gap: 3px; }
+  .hunger-entry .intensity-btns button {
+    padding: 4px 8px; border-radius: 4px; font-size: 11px; border: 1px solid #E5E7EB; background: #FFFFFF; color: #6B7280; cursor: pointer;
+  }
+  .hunger-entry .intensity-btns button.active { font-weight: 700; border-color: #2F3E46; background: #F0F2F1; color: #2F3E46; }
+
+  /* Buttons */
+  .btn { padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: #2F3E46; color: #fff; }
+  .btn-primary:hover { background: #3D4F58; }
+  .btn-secondary { background: #E5E7EB; color: #1F2933; }
+  .btn-secondary:hover { background: #D1D5DB; }
+  .btn-row { display: flex; justify-content: space-between; margin-top: 20px; }
+
+  /* Results */
+  .result-banner { background: #2F3E46; border-radius: 8px; padding: 18px 20px; color: white; margin-bottom: 18px; }
+  .score-big { font-size: 48px; font-weight: 700; }
+  .score-label-upper { font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1.2px; }
+  .score-label { font-size: 14px; font-weight: 600; }
+  .progress-track { position: relative; height: 24px; background: rgba(255,255,255,0.15); border-radius: 12px; overflow: hidden; margin-top: 12px; }
+  .progress-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 12px; background: linear-gradient(90deg, #5B8A72, #C59D5F, #A07B8A); transition: width 0.4s ease; }
+  .progress-mark { position: absolute; top: 0; height: 100%; border-left: 1px dashed rgba(255,255,255,0.4); }
+
+  .score-bar { margin-bottom: 10px; }
+  .score-bar-track { height: 10px; background: #E5E7EB; border-radius: 5px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 5px; transition: width 0.3s; }
+
+  .note-card { font-size: 12px; color: #1F2933; padding: 10px 12px; margin-bottom: 8px; border-radius: 6px; border-left: 3px solid #E5E7EB; line-height: 1.5; }
+
+  .prompt-placeholder { background: #F0F2F1; border: 2px dashed #5B8A72; border-radius: 10px; padding: 24px; text-align: center; margin-top: 20px; }
+
+  /* Two column on results */
+  .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) { .results-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  step: 0, // 0=intro, 1=EF, 2=PS, 3=PSL, 4=results
+
+  // EF inputs
+  workPattern: "remote",
+  kitchen: "full",
+  willingness: 3,
+  budget: 3,
+  groceryDrive: "0",
+  groceryDelivery: "no",
+  homeEasy: 5, homeMedEasy: 3, homeMedium: 2, homeHard: 1,
+  workEasy: 2, workMedEasy: 2, workMedium: 3, workHard: 4,
+
+  // PS inputs
+  preferredSleep: 8,
+  actualSleep: 6.5,
+  restedness: 3,
+  crashes: 2,
+  foggy: 2,
+  hangry: 2,
+  postMeal: 2,
+  hungerCount: 3,
+  hungerPoints: [
+    { time: "mid_morning", intensity: "moderate" },
+    { time: "early_afternoon", intensity: "moderate" },
+    { time: "evening", intensity: "mild" },
+  ],
+
+  // PSL inputs
+  rushed: 2,
+  disruptions: 1,
+  overload: 2,
+  cantExecute: 2,
+  drained: 2,
+  predictability: "mostly_predictable",
+
+  // Preview panel state
+  efPreviewOpen: false,
+  psPreviewOpen: false,
+  pslPreviewOpen: false,
+
+  // Scores (computed)
+  efScore: 0,
+  psScore: 0,
+  pslScore: 0,
+};
+
+// ============================================================
+// EF SCORING — exact copy from ef_scoring_simulator.html
+// ============================================================
+
+const BUDGET_MULTIPLIERS = [
+  { label: "1 — Very tight", mult: 1.5 },
+  { label: "2 — Tight", mult: 1.4 },
+  { label: "3 — Moderate", mult: 1.25 },
+  { label: "4 — Some flexibility", mult: 1.1 },
+  { label: "5 — Flexible", mult: 1.0 },
+];
+
+function scoreFoodLandscape(counts) {
+  const easyCount = counts.easy + counts.medEasy;
+  const medCount = counts.medium;
+  const hardCount = counts.hard;
+  const medFirst10 = Math.min(medCount, 10) * 0.5;
+  const medAfter10 = Math.max(0, medCount - 10) * 0.2;
+  const medValue = medFirst10 + medAfter10;
+  // Hard options contribute at 0.1 each — they exist but barely move the needle
+  const hardValue = hardCount * 0.1;
+  const totalUseful = easyCount + medValue + hardValue;
+  const frictionFromAccess = Math.max(0, 10 - totalUseful) / 10;
+  // Hard options still penalize when below adequacy threshold
+  let hardPenalty = 0;
+  if ((easyCount + medValue) < 10) {
+    const shortfall = (10 - (easyCount + medValue)) / 10;
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    const hardRatio = total > 0 ? hardCount / total : 0;
+    hardPenalty = shortfall * hardRatio * 0.3;
+  }
+  const rawFriction = Math.min(1, frictionFromAccess + hardPenalty);
+  return rawFriction * 50;
+}
+
+function calcGroceryFriction(groceryDrive, groceryDelivery, budget) {
+  let friction = Number(groceryDrive);
+  if (groceryDelivery === "yes" && budget >= 4) {
+    friction = Math.min(friction, 3);
+  } else if (groceryDelivery === "yes" && budget >= 1) {
+    friction = Math.max(0, friction - 1);
+  }
+  return friction;
+}
+
+function scoreSelfSufficiency(kitchen, willingness, groceryDrive, groceryDelivery, budget) {
+  const kitchenFriction = kitchen === "full" ? 0 : kitchen === "basic" ? 10 : 20;
+  const willingnessFriction = (5 - willingness) * 3.75;
+  const groceryFriction = calcGroceryFriction(groceryDrive, groceryDelivery, budget);
+  return Math.min(50, kitchenFriction + willingnessFriction + groceryFriction);
+}
+
+function computeEF(s) {
+  const hasWork = s.workPattern !== "remote";
+  const selfSuff = scoreSelfSufficiency(s.kitchen, s.willingness, s.groceryDrive, s.groceryDelivery, s.budget);
+  const homeCounts = { easy: s.homeEasy, medEasy: s.homeMedEasy, medium: s.homeMedium, hard: s.homeHard };
+  const workCounts = { easy: s.workEasy, medEasy: s.workMedEasy, medium: s.workMedium, hard: s.workHard };
+  let dependency;
+  if (!hasWork) {
+    dependency = scoreFoodLandscape(homeCounts);
+  } else {
+    dependency = (scoreFoodLandscape(homeCounts) + scoreFoodLandscape(workCounts)) / 2;
+  }
+  const rawFriction = selfSuff + dependency;
+  const budgetMult = BUDGET_MULTIPLIERS[s.budget - 1].mult;
+  return Math.min(100, rawFriction * budgetMult);
+}
+
+// ============================================================
+// PS SCORING — exact copy from ps_scoring_simulator.html
+// ============================================================
+
+function scoreSleep(preferred, actual, restedness) {
+  const debt = Math.max(0, preferred - actual);
+  let debtFriction;
+  if (debt <= 0) debtFriction = 0;
+  else if (debt <= 1) debtFriction = 5;
+  else if (debt <= 2) debtFriction = 12;
+  else if (debt <= 3) debtFriction = 20;
+  else debtFriction = 25;
+
+  const neutralFriction = 10;
+  const rawRestFriction = (5 - restedness) * 5;
+
+  let reductionPower;
+  if (debt <= 0.5) reductionPower = 1.0;
+  else if (debt <= 1) reductionPower = 0.8;
+  else if (debt <= 1.5) reductionPower = 0.5;
+  else if (debt <= 2) reductionPower = 0.3;
+  else if (debt <= 3) reductionPower = 0.1;
+  else reductionPower = 0.05;
+
+  let restFriction;
+  if (rawRestFriction >= neutralFriction) {
+    restFriction = rawRestFriction;
+  } else {
+    const reduction = neutralFriction - rawRestFriction;
+    const allowedReduction = reduction * reductionPower;
+    restFriction = neutralFriction - allowedReduction;
+  }
+
+  return { debtFriction, restFriction: Math.round(restFriction * 10) / 10, total: Math.min(40, debtFriction + restFriction), debt };
+}
+
+function scoreEnergy(crashes, foggy, hangry, postMeal) {
+  const symptomToFriction = [0, 0, 2, 5, 8, 10];
+  const postMealToFriction = [0, 0, 1, 3, 5, 7];
+  const crashFriction = symptomToFriction[crashes];
+  const fogFriction = symptomToFriction[foggy];
+  const hangryFriction = symptomToFriction[hangry];
+  const postMealFriction = postMealToFriction[postMeal];
+  const raw = crashFriction + fogFriction + hangryFriction + postMealFriction;
+  const total = Math.min(35, raw);
+  const elevatedSymptoms = crashes >= 3 || foggy >= 3 || hangry >= 3;
+  return { total, elevatedSymptoms };
+}
+
+function scoreHunger(hungerPoints, elevatedSymptoms) {
+  const count = hungerPoints.length;
+  const intensityScores = { mild: 0, moderate: 2, intense: 5 };
+  const totalIntensity = hungerPoints.reduce((sum, p) => sum + intensityScores[p.intensity], 0);
+  const avgIntensityFriction = count > 0 ? totalIntensity / count : 0;
+  const avgIntensityLevel = count > 0
+    ? hungerPoints.reduce((sum, p) => sum + (p.intensity === "mild" ? 1 : p.intensity === "moderate" ? 2 : 3), 0) / count
+    : 0;
+
+  let countFriction = 0;
+  if (count <= 1 && elevatedSymptoms) {
+    countFriction = 3;
+  } else if (count >= 5) {
+    countFriction = 4;
+  }
+
+  let clusterFriction = 0;
+  if (count >= 2) {
+    const timeSlots = { early_morning: 0, mid_morning: 1, midday: 2, early_afternoon: 3, late_afternoon: 4, evening: 5, night: 6, late_night: 7 };
+    const slots = hungerPoints.map(p => timeSlots[p.time]).sort((a, b) => a - b);
+    const spread = slots[slots.length - 1] - slots[0];
+    if (spread <= 1 && avgIntensityLevel >= 2) clusterFriction = 5;
+    else if (spread <= 2 && avgIntensityLevel >= 2) clusterFriction = 3;
+  }
+
+  const lateIntense = hungerPoints.filter(p =>
+    (p.time === "night" || p.time === "late_night") && p.intensity === "intense"
+  ).length;
+  const lateNightFriction = lateIntense * 3;
+
+  return { total: Math.min(25, avgIntensityFriction + countFriction + clusterFriction + lateNightFriction) };
+}
+
+function computePS(s) {
+  const sleep = scoreSleep(s.preferredSleep, s.actualSleep, s.restedness);
+  const energy = scoreEnergy(s.crashes, s.foggy, s.hangry, s.postMeal);
+  const hunger = scoreHunger(s.hungerPoints, energy.elevatedSymptoms);
+  return Math.min(100, sleep.total + energy.total + hunger.total);
+}
+
+// ============================================================
+// PSL SCORING — exact copy from psl_scoring_simulator.html
+// ============================================================
+
+function scoreStressItems(rushed, disruptions, overload, cantExecute, drained) {
+  const rawSum = rushed + disruptions + overload + cantExecute + drained;
+  const baseStress = (rawSum / 20) * 80;
+  return { rawSum, baseStress };
+}
+
+function scorePredictability(predictability, baseStress) {
+  const modifierMap = { "highly_predictable": 0, "mostly_predictable": 5, "mixed": 10, "mostly_unpredictable": 15, "chaotic": 20 };
+  const rawModifier = modifierMap[predictability] || 0;
+  const stressRatio = baseStress / 80;
+  const contribution = rawModifier * stressRatio;
+  return { rawModifier, stressRatio, contribution };
+}
+
+function computePSL(s) {
+  const stress = scoreStressItems(s.rushed, s.disruptions, s.overload, s.cantExecute, s.drained);
+  const pred = scorePredictability(s.predictability, stress.baseStress);
+  return Math.min(100, stress.baseStress + pred.contribution);
+}
+
+// ============================================================
+// COMPOSITE — exact copy from ddt_triangle.html
+// ============================================================
+
+function computeComposite(ef, ps, psl) {
+  const sEf = 100 - ef;
+  const sPs = 100 - ps;
+  const sPsl = 100 - psl;
+  if (sEf <= 0 || sPs <= 0 || sPsl <= 0) {
+    return { stability: 0, friction: 100 };
+  }
+  const hm = 3 / (1/sEf + 1/sPs + 1/sPsl);
+  return { stability: hm, friction: 100 - hm };
+}
+
+// ============================================================
+// ARCHETYPE ENGINE
+// ============================================================
+
+function generateArchetypeReport(s) {
+  const ef = computeEF(s);
+  const ps = computePS(s);
+  const psl = computePSL(s);
+
+  // Step 1: identify dominant axis
+  const maxScore = Math.max(ef, ps, psl);
+  let dominantAxis;
+  if (ef === maxScore) dominantAxis = "ef";
+  else if (ps === maxScore) dominantAxis = "ps";
+  else dominantAxis = "psl";
+
+  // Step 2: match archetype within dominant axis
+  let archetype = null;
+
+  if (dominantAxis === "ef") {
+    // Minimal Kitchen Operator
+    if (s.kitchen === "minimal" || (s.kitchen === "basic" && s.willingness <= 2)) {
+      archetype = {
+        name: "Minimal Kitchen Operator",
+        explanation: "Your kitchen setup doesn't really support regular cooking — so you're naturally leaning on external food sources most of the time. That's not a discipline issue, it's just what happens when the space doesn't match the intention. The gap between 'I should cook more' and 'I can't really do that here' creates a quiet kind of strain that wears on consistency over time.",
+        leveragePoint: "Rather than trying to cook more, focus on building a short list of ready-to-eat and delivery-friendly meals you can rely on. The skill here isn't cooking — it's knowing what works within your actual setup and having it ready to go.",
+        promptContext: "limited or no functional kitchen, reliance on external food sources, need for a zero-prep default meal system"
+      };
+    }
+    // Food Landscape Constrained
+    else if ((s.homeEasy + s.homeMedEasy) < 5) {
+      archetype = {
+        name: "Food Landscape Constrained",
+        explanation: "There aren't many quick, easy meal options around you right now. When the path of least resistance keeps leading away from what you'd prefer to eat, consistency starts to feel like an endurance test rather than something that just happens. This isn't about willpower — it's about what's actually available when you need to eat.",
+        leveragePoint: "Start by mapping every quick option you might not have considered — anything under 5 minutes, including items you can stock at home or at work. The goal is to make the easy choice and the better choice the same thing more often.",
+        promptContext: "very few quick meal options nearby, food environment that defaults toward high-friction choices, need to expand accessible options without relying on willpower"
+      };
+    }
+    // Non-Cooker
+    else if (s.willingness <= 2 && s.kitchen === "full") {
+      archetype = {
+        name: "Non-Cooker",
+        explanation: "You have a kitchen, but cooking just doesn't feel like something that fits your life right now — and that's worth respecting rather than fighting. If you've tried the 'meal prep Sunday' approach and it didn't stick, that's telling you something. For you, cooking adds more strain than it removes, and building a plan around it means building on something that won't hold.",
+        leveragePoint: "Instead of planning around cooking, lean into assembly meals — things you combine rather than cook — and a short list of 2–3 pre-made options you'd genuinely repeat. The goal is meals that feel easy enough to actually happen.",
+        promptContext: "full kitchen available but very low cooking willingness, need for a meal system that doesn't rely on cooking motivation, assembly-based and pre-made options preferred"
+      };
+    }
+    // Budget Constrained Planner
+    else if (s.budget <= 2) {
+      archetype = {
+        name: "Budget Constrained Planner",
+        explanation: "Money pressure is making everything else around food feel harder. When budget is tight, the cheapest options tend to be the least helpful, and the mental load of tracking costs on top of planning meals drains energy fast. It's not just about having less to spend — it's that a tight budget narrows what's realistically available to you.",
+        leveragePoint: "Focus on finding 5–8 meals that are both affordable and repeatable in your environment. Batch buying and timing purchases around sales can stretch things further. Variety matters less here than knowing exactly what works and having it available.",
+        promptContext: "tight food budget amplifying environmental friction, need for cost-optimized meal options that still support dietary goals, cannot rely on convenience/delivery solutions"
+      };
+    }
+    // Commuter Constraint
+    else if (s.workPattern !== "remote" && (s.workEasy + s.workMedEasy) < 3) {
+      archetype = {
+        name: "Commuter Constraint",
+        explanation: "Your work environment doesn't have many quick food options, which means a big chunk of your day happens somewhere that makes eating well genuinely difficult. It's easy to end up skipping meals or grabbing whatever's available — not because you forgot to plan, but because the commute and work setup make packing food feel like one more thing on an already full plate.",
+        leveragePoint: "Treat work meals as a separate problem from home meals. A few pack-friendly defaults and a 'forgot to pack' backup plan will do more for your consistency than any home-based strategy.",
+        promptContext: "poor food access at/near workplace, commute adding time pressure, need for portable and work-compatible meal solutions with a backup plan"
+      };
+    }
+    // Fallback EF archetype
+    if (!archetype) {
+      archetype = {
+        name: "Environmental Friction Profile",
+        explanation: "Your food environment is creating resistance in several small ways rather than one big obvious way. You might feel like things should be easier but can't quite pinpoint why consistency keeps slipping. That's usually because multiple small frictions are adding up — each one manageable on its own, but together they wear you down.",
+        leveragePoint: "Walk through your typical food routine from start to finish — getting groceries, storing food, preparing meals, cleaning up. Look for the one step where you lose the most time or energy each week, and simplify just that part first.",
+        promptContext: "moderate environmental friction from multiple sources, no single dramatic constraint but compounding small barriers, need for systematic friction reduction across the food supply chain"
+      };
+    }
+  }
+
+  else if (dominantAxis === "ps") {
+    const sleep = scoreSleep(s.preferredSleep, s.actualSleep, s.restedness);
+    const energy = scoreEnergy(s.crashes, s.foggy, s.hangry, s.postMeal);
+    const lateIntense = s.hungerPoints.filter(p =>
+      (p.time === "night" || p.time === "late_night") && p.intensity === "intense"
+    ).length;
+
+    // Sleep Debt Destabilized
+    if ((s.preferredSleep - s.actualSleep) >= 1.5) {
+      archetype = {
+        name: "Sleep Debt Destabilized",
+        explanation: "You're consistently getting less sleep than your body needs, and that's quietly making everything around food harder. When you're running on a deficit like this, hunger signals get louder, cravings feel stronger, and it becomes harder to follow through on intentions. It's not a willpower issue — your body is genuinely working with less than it needs.",
+        leveragePoint: "Even a small improvement in sleep — 20 or 30 minutes more — can make a noticeable difference in how steady your hunger and energy feel. This may be the place where things start to feel easier before anything else changes.",
+        promptContext: "significant sleep debt destabilizing hunger and energy regulation, need for strategies that work within current sleep reality while gradually closing the gap"
+      };
+    }
+    // Energy Crash Reactive
+    else if (s.crashes >= 3 || s.foggy >= 3) {
+      archetype = {
+        name: "Energy Crash Reactive",
+        explanation: "When your energy dips frequently, eating becomes reactive — you reach for whatever's fast because you're crashing, not because you planned to eat. Over time this creates a pattern where how you feel is driving what you eat, rather than the other way around. It makes sense that consistency is harder when your body keeps pulling you toward quick fixes.",
+        leveragePoint: "The most helpful shift is eating before the crash happens rather than in response to it. Meals that provide steadier energy — even simple ones — can break the cycle. Think of it as getting ahead of the dip rather than chasing it.",
+        promptContext: "frequent energy crashes and/or brain fog driving reactive eating patterns, need for a pre-emptive fueling strategy that prevents crashes rather than responding to them"
+      };
+    }
+    // Late Night Compensation Pattern
+    else if (lateIntense > 0) {
+      archetype = {
+        name: "Late Night Compensation Pattern",
+        explanation: "That intense hunger late at night is usually your body catching up on something it didn't get enough of earlier — whether that's food, rest, or just a long day wearing you down. You might eat well during the day and then hit a window at night where cravings take over. That's not weak willpower at 10pm — it's more like your body settling a tab from earlier in the day.",
+        leveragePoint: "The most effective thing isn't resisting the nighttime hunger — it's preventing it by eating a bit more, earlier in the day. When your body gets enough before the evening, the late-night pull tends to quiet down on its own.",
+        promptContext: "intense late-night hunger indicating daytime under-fueling or poor meal timing, need for a front-loaded eating schedule that prevents nighttime compensation"
+      };
+    }
+    // Unstable Hunger Pattern
+    else if (s.hungerPoints.length >= 5) {
+      archetype = {
+        name: "Unstable Hunger Pattern",
+        explanation: "You're feeling hungry a lot throughout the day, which usually means your current eating rhythm isn't quite matching what your body needs. Each time hunger shows up, it becomes a moment where you have to make a decision — and the more of those moments there are, the harder it is to stay consistent. It's tiring to manage that all day.",
+        leveragePoint: "The goal isn't eating less — it's eating in a rhythm that keeps you from hitting the 'I need food now' state so often. A more structured pattern can quiet the noise and free up mental space.",
+        promptContext: "frequent hunger events throughout the day indicating mismatched eating pattern, need for a structured meal rhythm that minimizes hunger-driven decision points"
+      };
+    }
+    // Low Recovery Capacity
+    else if (s.restedness <= 2 && (s.crashes >= 2 || s.foggy >= 2 || s.hangry >= 2)) {
+      archetype = {
+        name: "Low Recovery Capacity",
+        explanation: "Your body isn't recovering well between days — you're starting each day a little more worn down than the last. By the end of the week, eating well becomes noticeably harder because the energy you had on Monday has gradually run out. It's not that you stop caring — it's that your capacity shrinks as the week goes on.",
+        leveragePoint: "Build your food routine around your hardest day, not your best. If you can reliably manage three simple meals, build around those. Anything beyond that is a bonus, not the baseline.",
+        promptContext: "low physical recovery with moderate energy symptoms, declining capacity across the week, need for a minimal viable meal system designed for low-energy days"
+      };
+    }
+    // Fallback PS archetype
+    if (!archetype) {
+      archetype = {
+        name: "Physiological Friction Profile",
+        explanation: "Your sleep, energy, and hunger patterns are each adding a little friction — nothing dramatic on its own, but together they create a general drag that makes consistency harder than it feels like it should be. You might feel 'fine enough' most days but notice that things gradually slide without a clear reason. That's usually these signals quietly compounding.",
+        leveragePoint: "Start with whichever signal feels easiest to steady. For most people that's meal timing — eating at more consistent times often helps energy and hunger settle down together.",
+        promptContext: "moderate physiological friction from multiple body signals, need for a stabilizing eating rhythm that addresses sleep, energy, and hunger patterns together"
+      };
+    }
+  }
+
+  else { // PSL dominant
+    // Time Compressed Executor
+    if (s.rushed >= 3) {
+      archetype = {
+        name: "Time Compressed Executor",
+        explanation: "You're frequently rushed, which means food decisions are happening under time pressure — and under time pressure, you'll almost always default to whatever's fastest. You might plan well in theory, but there's rarely enough space in the day to actually do the thing you planned. That's not a failure of planning — it's a mismatch between what the plan requires and what the day allows.",
+        leveragePoint: "Rather than making better in-the-moment decisions, try making fewer of them. Pre-deciding meals for the week in one short session means there's nothing left to figure out when time is tight.",
+        promptContext: "chronic time pressure collapsing food decisions to fastest available option, need for a pre-decided meal system that requires zero real-time planning"
+      };
+    }
+    // Unpredictable Schedule Adapter
+    else if (s.predictability === "mostly_unpredictable" || s.predictability === "chaotic") {
+      archetype = {
+        name: "Unpredictable Schedule Adapter",
+        explanation: "Your days are unpredictable enough that fixed meal plans just don't hold. If you've tried structured approaches and they fell apart within a few days, that's not a personal failing — it's a mismatch between rigid advice and a life that doesn't stay still. The structure needs to move with you, not the other way around.",
+        leveragePoint: "Instead of a fixed plan, think in terms of 'if-then' options: 'If I'm home by 6, I'll have this. If not, I'll grab that.' Having a few flexible defaults ready means your system adapts with your day instead of breaking when things shift.",
+        promptContext: "highly unpredictable schedule that breaks rigid meal plans, need for a modular if-then meal system that adapts to daily variability"
+      };
+    }
+    // Cognitive Overload Profile
+    else if (s.overload >= 3 && s.drained >= 3) {
+      archetype = {
+        name: "Cognitive Overload Profile",
+        explanation: "You're carrying a lot mentally right now, and food logistics are competing with everything else for attention that's already stretched thin. It's not that you don't know what to eat — it's that by the time a food decision comes up, there's nothing left in the tank to make it well. That's an understandable response to being overloaded, not a knowledge gap.",
+        leveragePoint: "Simplify your food down to a very short list — 3 to 5 meals you can do on autopilot without thinking. Variety can come back later when there's more breathing room. Right now, repeating the same easy things is what makes consistency possible.",
+        promptContext: "cognitive overload leaving no bandwidth for food logistics, need for an ultra-simplified 3-5 meal rotation that runs on autopilot"
+      };
+    }
+    // Execution Gap Pattern
+    else if (s.cantExecute >= 3) {
+      archetype = {
+        name: "Execution Gap Pattern",
+        explanation: "You generally know what you'd like to be doing with food, but following through keeps falling short. That gap between 'I planned this' and 'I actually did it' can feel frustrating, but it usually means the plan requires more effort in the moment than feels manageable. It's not that you're not trying — it's that the steps between intention and action are heavier than they seem.",
+        leveragePoint: "Make the first step of any meal as easy as possible. If what you planned takes more than a couple of steps to do in the moment, it might be asking too much. Build around what you'll realistically do, not what you think you should do.",
+        promptContext: "consistent gap between food intentions and execution, plans exist but require too much activation energy, need for ultra-low-barrier meal defaults"
+      };
+    }
+    // Decision Fatigue Accumulator
+    else if (s.drained >= 3 && s.overload >= 2) {
+      archetype = {
+        name: "Decision Fatigue Accumulator",
+        explanation: "Your mental energy runs down over the course of the day, and food choices tend to get harder as the day goes on. You might eat well in the morning but notice things deteriorate by evening — not because you stop caring, but because you've spent your decision-making energy on everything else by then. It's a very common pattern.",
+        leveragePoint: "Try making tomorrow's food decisions tonight or first thing in the morning, when you have the most clarity. If evening is where things tend to fall apart, that's the meal to automate completely — take the decision out of it.",
+        promptContext: "decision fatigue accumulating through the day degrading food choices by evening, need for front-loaded food decisions and fully automated evening meals"
+      };
+    }
+    // Fallback PSL archetype
+    if (!archetype) {
+      archetype = {
+        name: "Psychological Friction Profile",
+        explanation: "There's a general mental weight around food logistics right now — not one big thing, but a spread of smaller pressures that make planning and follow-through feel heavier than it should. When the strain is diffuse like this, it can be hard to know where to start. That's normal — it's also why small, simple changes tend to work better than big overhauls.",
+        leveragePoint: "Start by reducing the total number of food decisions you make each day. Even defaulting just breakfast and snacks — so you don't have to think about them — can free up surprising amounts of mental space.",
+        promptContext: "diffuse psychological stress taxing food logistics bandwidth, need for systematic decision reduction starting with the easiest meals to automate"
+      };
+    }
+  }
+
+  // Build secondary recommendation if two axes are elevated
+  let secondary = null;
+  const axes = [
+    { name: "Environmental Friction", score: ef, key: "ef" },
+    { name: "Physiological Friction", score: ps, key: "ps" },
+    { name: "Psychological Stress Load", score: psl, key: "psl" },
+  ].sort((a, b) => b.score - a.score);
+
+  if (axes[1].score >= 45) {
+    const secondAxis = axes[1];
+    const secondaryMessages = {
+      ef: `Your food environment is also adding some strain (${secondAxis.score.toFixed(0)}/100). Even as your main area improves, limited food access or logistics may still make things feel harder than expected. It's worth mapping your easiest options alongside everything else.`,
+      ps: `Your body signals are also playing a role (${secondAxis.score.toFixed(0)}/100). Sleep, energy, or hunger patterns are adding another layer that can make consistency feel harder. Steadying meal timing may help settle this alongside your main focus.`,
+      psl: `Mental load is also a factor (${secondAxis.score.toFixed(0)}/100). Your bandwidth is stretched, which means any approach needs to be simple enough to follow through on even when you're running low. Keep that in mind as things take shape.`,
+    };
+    secondary = secondaryMessages[secondAxis.key];
+  }
+
+  // Build the prompt
+  const composite = computeComposite(ef, ps, psl);
+
+  // Primary axis guidance — anchors AI reasoning to highest-friction axis
+  const sorted = [
+    { key: "ef", score: ef, label: "Environmental Friction" },
+    { key: "ps", score: ps, label: "Physiological Friction" },
+    { key: "psl", score: psl, label: "Psychological Stress Load" },
+  ].sort((a, b) => b.score - a.score);
+  const gap = sorted[0].score - sorted[1].score;
+  const intensity = gap >= 15 ? "substantially" : "moderately";
+
+  const axisGuidanceMap = {
+    ef: `${sorted[0].label} is ${intensity} higher than the other areas, so the most helpful starting point is easing the practical barriers in the food environment before working on other areas.`,
+    ps: `${sorted[0].label} is ${intensity} higher than the other areas, so the most helpful starting point is steadying sleep, hunger, and energy patterns before working on other areas.`,
+    psl: `${sorted[0].label} is ${intensity} higher than the other areas, so the most helpful starting point is simplifying decisions and reducing mental load before working on other areas.`,
+  };
+  const primaryAxisGuidance = axisGuidanceMap[sorted[0].key];
+
+  const promptText = `You are helping identify and reduce the primary source of friction that is disrupting someone's ability to follow through on planned behavior consistently.
+
+The user completed a Dietary Destabilization Triangle (DDT) assessment. The DDT measures how much friction someone's everyday life creates across three dimensions. When friction is high, consistency becomes harder — not because of willpower or knowledge, but because of what daily life is actually demanding.
+
+The assessment measures three kinds of friction:
+
+Environmental Friction
+How easy or hard it is to access and repeat planned behaviors in the user's real daily surroundings — physical setup, available options, logistics, budget, work environment.
+
+Physiological Friction
+How much sleep, energy, and bodily rhythms are undermining stability — sleep debt, sleep timing variability, energy crashes, circadian disruption, hunger volatility, stimulant timing.
+
+Psychological Stress Load
+How much time pressure, unpredictability, and cognitive load are wearing down follow-through capacity — feeling rushed, disrupted, overloaded, drained, decision-fatigued.
+
+The core idea:
+Consistency gets easier when friction goes down.
+The goal is to reduce friction at its source so that follow-through becomes more reliable and requires less effort.
+A plan that looks good on paper but cannot be executed consistently under real conditions is not useful.
+
+Start from what makes consistency easier to sustain in real life, not from what's theoretically ideal.
+
+When Environmental Friction is dominant, food environment design is the correct intervention — focus on access, defaults, logistics, and practical structure.
+
+When Physiological Friction or Psychological Stress Load is dominant, treat food as a downstream dependent variable, not the primary intervention target. Focus on identifying and reducing the upstream constraint itself.
+
+Focus on:
+- reducing the primary source of friction at its origin
+- improving follow-through reliability
+- making planned behavior easier to repeat
+- building stable defaults and fallback options
+- creating something steady rather than something ideal
+
+Avoid:
+- generic nutrition advice
+- defaulting to meal planning when food is not the primary constraint
+- routines that require high discipline to maintain
+- adding complexity to someone who's already stretched
+
+Keep everything grounded in the user's real environment, real schedule, and real energy levels.
+
+----------------------
+
+User profile from assessment:
+
+Environmental Friction: ${ef.toFixed(0)} / 100
+Physiological Friction: ${ps.toFixed(0)} / 100
+Psychological Stress Load: ${psl.toFixed(0)} / 100
+Composite Friction: ${composite.friction.toFixed(0)} / 100
+
+Profile:
+${archetype.name}
+
+What this means:
+${archetype.explanation}
+
+${primaryAxisGuidance}
+
+How to approach this depends on where the friction is coming from:
+
+If Environmental Friction is dominant:
+Focus on the food environment — food access, default meals, grocery logistics, and practical structure. This is the one axis where food-system design is the correct primary intervention.
+
+If Physiological Friction is dominant:
+Focus on stabilizing the biological or behavioral driver creating instability — sleep opportunity, sleep timing variability, fatigue drivers, recovery constraints, circadian disruption, stimulant timing, schedule compression.
+Do not reference meal planning, meal structure, or diet changes unless the user explicitly connects their physiological friction to eating patterns.
+The conversation should feel like it is addressing the constraint itself, not routing everything back to food.
+
+If Psychological Stress Load is dominant:
+Focus on reducing planning overhead, unpredictability, decision fatigue, time fragmentation, and cognitive load.
+Do not introduce food system changes until the primary cognitive or structural constraint is understood and addressed.
+The conversation should feel like it is helping reduce mental strain, not planning meals.
+
+Food is a downstream dependent variable when PS or PSL is dominant. Only introduce food context if:
+- the user explicitly connects the friction to eating patterns, or
+- the primary constraint has been sufficiently understood and addressed, and food structure would provide additional stability.
+
+Help this person reduce the friction the assessment identified — so that follow-through becomes more reliable and consistent.
+
+As the conversation develops, you're working toward understanding:
+A. What's making follow-through feel hard right now
+B. Why that tends to disrupt consistency in everyday life
+C. What more stable, lower-friction behavior would look like for them
+D. A repeatable structure they could realistically sustain
+E. Concrete defaults appropriate to the dominant axis (meals if EF; sleep/energy patterns if PS; simplified routines if PSL)
+F. What to fall back on when things go sideways or capacity is low
+G. The 3 changes most likely to reduce friction quickly
+H. What "better" looks like day-to-day — not in outcomes, but in how consistent behavior feels
+
+These should come up naturally through conversation, not all at once.
+
+How the conversation should flow:
+
+Phase 1 — Interpret the friction signal
+Start by explaining what type of friction is dominant and how it typically disrupts follow-through.
+Interpret friction in terms of consistency mechanics, not nutrition mechanics.
+When PS or PSL is dominant, avoid framing the opening around food, meals, eating behavior, or diet quality. Use neutral language: follow-through, consistency, execution reliability, behavioral stability.
+Help the user see the pattern in practical, everyday terms before suggesting anything.
+Focus on:
+- what kind of friction is most elevated
+- how that specific type of friction tends to disrupt consistency
+- how it usually shows up in real life
+Don't jump to routines, meal plans, or fixes yet.
+
+Phase 2 — Diagnose the cause of that friction
+Ask 1–2 focused questions to understand why this friction exists for this specific person.
+You're trying to understand the cause, not just the symptom.
+For example:
+- what's driving the sleep instability? (PS)
+- what time do you typically get to sleep, and how variable is it? (PS)
+- what part of the day feels hardest to manage? (PSL)
+- what keeps disrupting the plan you had? (PSL)
+- when things go off track, what's usually happening around you?
+Skip questions that don't connect to the primary source of friction.
+
+Phase 3 — Identify where things could shift at the source
+Once you have a clearer picture, point out 1–2 places where a practical change could ease the friction at its origin — not just manage effects further down the chain.
+Explain how addressing this would make the rest feel more manageable.
+Keep suggestions practical, not motivational.
+
+Phase 4 — Build supporting structure
+Only after the primary source of friction is understood, introduce supporting structure if needed:
+- food environment design (only if EF is dominant)
+- sleep architecture or energy stabilization strategies (if PS is dominant)
+- cognitive load reduction, schedule simplification, or decision batching (if PSL is dominant)
+- fallback defaults for low-capacity days
+Food context should only enter the conversation if EF is dominant or the user explicitly connects their constraint to eating patterns.
+Let this emerge over several turns, not all in one response.
+
+Conversation style:
+Keep it concise. Keep it direct.
+Prefer short, conversational exchanges over long, comprehensive responses.
+Don't overwhelm with too many ideas early on.
+Ask questions with purpose — usually 1–4 across the whole conversation is enough.
+Once the picture is clear enough, move toward concrete, practical suggestions.
+Don't drift into theoretical fixes or complicated biology unless it directly reduces friction in practice.
+If addressing a body signal would add complexity, simplify instead.
+Things should feel more manageable even if sleep or energy aren't perfect yet.
+
+The point is not a perfect diet.
+The point is reducing friction so that consistent behavior becomes more automatic.
+Everything you suggest should still work when the user is tired, busy, interrupted, or just not feeling it.
+Something steady is better than something ideal but hard to keep up.
+
+Voice:
+
+Speak like a calm, grounded coach — warm but not soft, curious but not probing, direct but not clinical.
+
+Use language like:
+- "It sounds like..."
+- "One thing that stands out..."
+- "That makes sense given..."
+- "Here's what I'd focus on first..."
+- "Let's see if we can make that easier..."
+- "This is where things might start to shift..."
+
+Do not use language like:
+- "key constraint"
+- "optimization lever"
+- "execution failure"
+- "primary bottleneck"
+- "suboptimal"
+- "caloric deficit"
+- "activation energy"
+- "unlock capacity"
+- "triage"
+- "adherence"
+- "root constraint"
+- any phrasing that sounds like a systems engineering report, consulting framework, or performance diagnostic
+
+Describe experiences rather than evaluate performance.
+Describe patterns rather than identify faults.
+Treat friction as something happening to the user, not something caused by the user.
+Be collaborative rather than directive.
+Be reflective rather than prescriptive.
+
+When reflecting back:
+1. Describe the pattern you see in plain, human terms.
+2. Normalize it — explain why it makes sense given the user's situation.
+3. Highlight what's reinforcing the difficulty.
+4. Offer a question or observation that moves toward something practical.
+5. Don't prescribe a fix until the picture is clear enough.
+
+The user should feel understood rather than evaluated.
+Clarity matters more than warmth. Don't add filler.`;
+
+  return {
+    archetypeName: archetype.name,
+    explanation: archetype.explanation,
+    leveragePoint: archetype.leveragePoint,
+    promptText: promptText,
+    secondary: secondary,
+    dominantAxis: dominantAxis,
+    axisGuidance: primaryAxisGuidance,
+  };
+}
+
+function getCompositeZone(friction) {
+  if (friction <= 15) return { label: "Highly Stable", color: "#5B8A72" };
+  if (friction <= 30) return { label: "Mostly Stable", color: "#7A9E6B" };
+  if (friction <= 50) return { label: "Moderate Friction", color: "#C59D5F" };
+  if (friction <= 70) return { label: "High Friction", color: "#B07A5B" };
+  return { label: "Critical Instability", color: "#A07B8A" };
+}
+
+function getAxisColor(score) {
+  if (score <= 20) return "#5B8A72";
+  if (score <= 40) return "#7A9E6B";
+  if (score <= 60) return "#C59D5F";
+  if (score <= 80) return "#B07A5B";
+  return "#A07B8A";
+}
+
+function getBottleneck(ef, ps, psl) {
+  const max = Math.max(ef, ps, psl);
+  const axes = [];
+  if (ef === max) axes.push("Environmental Friction");
+  if (ps === max) axes.push("Physiological Friction");
+  if (psl === max) axes.push("Psychological Stress Load");
+  return axes;
+}
+
+function getInterpretation(ef, ps, psl, composite) {
+  const bottlenecks = getBottleneck(ef, ps, psl);
+  const bn = bottlenecks[0];
+  const maxScore = Math.max(ef, ps, psl);
+  const minScore = Math.min(ef, ps, psl);
+  const spread = maxScore - minScore;
+
+  if (composite.friction <= 20) {
+    return "Things are relatively smooth across all three areas. Your environment, body signals, and mental bandwidth are all working with you — which means standard approaches to food planning should feel manageable.";
+  } else if (composite.friction <= 35) {
+    return `There's some friction showing up, mostly around ${bn} (${maxScore.toFixed(0)}/100). This is the kind of thing that's easy to overlook — it probably won't stop you from starting a plan, but it can quietly wear on consistency over time.`;
+  } else if (composite.friction <= 50) {
+    if (spread <= 15) {
+      return `Friction is moderate and spread fairly evenly (${ef.toFixed(0)} / ${ps.toFixed(0)} / ${psl.toFixed(0)}). There's no single thing to fix — it's more that everything is a little harder than it needs to be. Simplifying broadly tends to help more than focusing on one area.`;
+    }
+    return `There's moderate-to-high friction here, with ${bn} standing out at ${maxScore.toFixed(0)}/100. Easing this area first is likely where you'd feel the most relief in terms of day-to-day consistency.`;
+  } else {
+    if (spread <= 15) {
+      return `Friction is high across the board (${ef.toFixed(0)} / ${ps.toFixed(0)} / ${psl.toFixed(0)}). Your environment, body, and bandwidth are all under pressure at once. Rather than trying to fix everything, the most helpful move is picking the single easiest change and stabilizing there first.`;
+    }
+    return `Friction is high, with ${bn} at ${maxScore.toFixed(0)}/100 standing out as the main source of strain. Easing things here is likely where you'd start to feel more room for consistency in other areas too.`;
+  }
+}
+
+// ============================================================
+// TRIANGLE SVG — exact geometry from ddt_triangle.html
+// ============================================================
+
+const TRI_SIZE = 365;
+const TRI_PAD = 60;
+const V_PSL = { x: TRI_SIZE / 2 + TRI_PAD, y: TRI_PAD };
+const V_EF  = { x: TRI_PAD, y: TRI_SIZE + TRI_PAD - 20 };
+const V_PS  = { x: TRI_SIZE + TRI_PAD, y: TRI_SIZE + TRI_PAD - 20 };
+const CENTROID = {
+  x: (V_PSL.x + V_EF.x + V_PS.x) / 3,
+  y: (V_PSL.y + V_EF.y + V_PS.y) / 3,
+};
+
+function getClientTrianglePoints(ef, ps, psl) {
+  return {
+    efPt:  { x: CENTROID.x + (V_EF.x - CENTROID.x) * (ef / 100),  y: CENTROID.y + (V_EF.y - CENTROID.y) * (ef / 100) },
+    psPt:  { x: CENTROID.x + (V_PS.x - CENTROID.x) * (ps / 100),  y: CENTROID.y + (V_PS.y - CENTROID.y) * (ps / 100) },
+    pslPt: { x: CENTROID.x + (V_PSL.x - CENTROID.x) * (psl / 100), y: CENTROID.y + (V_PSL.y - CENTROID.y) * (psl / 100) },
+  };
+}
+
+function renderTriangleSVG(ef, ps, psl) {
+  const svgW = TRI_SIZE + TRI_PAD * 2;
+  const svgH = TRI_SIZE + TRI_PAD * 2;
+  const { efPt, psPt, pslPt } = getClientTrianglePoints(ef, ps, psl);
+  const composite = computeComposite(ef, ps, psl);
+  const zone = getCompositeZone(composite.friction);
+
+  function shrink(factor) {
+    return [
+      { x: CENTROID.x + (V_PSL.x - CENTROID.x) * factor, y: CENTROID.y + (V_PSL.y - CENTROID.y) * factor },
+      { x: CENTROID.x + (V_EF.x - CENTROID.x) * factor,  y: CENTROID.y + (V_EF.y - CENTROID.y) * factor },
+      { x: CENTROID.x + (V_PS.x - CENTROID.x) * factor,  y: CENTROID.y + (V_PS.y - CENTROID.y) * factor },
+    ];
+  }
+  function tp(v) { return `M${v[0].x},${v[0].y} L${v[1].x},${v[1].y} L${v[2].x},${v[2].y} Z`; }
+
+  const bands = [
+    { f: 1.0, c: "#A07B8A", o: 0.06 }, { f: 0.8, c: "#B07A5B", o: 0.05 },
+    { f: 0.6, c: "#C59D5F", o: 0.06 }, { f: 0.33, c: "#7A9E6B", o: 0.06 },
+  ];
+
+  const clientPath = `M${pslPt.x},${pslPt.y} L${efPt.x},${efPt.y} L${psPt.x},${psPt.y} Z`;
+
+  return `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" style="display:block;margin:0 auto;">
+    ${bands.map(b => `<path d="${tp(shrink(b.f))}" fill="${b.c}" opacity="${b.o}"/>`).join("")}
+    <path d="${tp([V_PSL, V_EF, V_PS])}" fill="none" stroke="#2F3E46" stroke-width="2.5"/>
+    ${[0.33, 0.66].map(f => `<path d="${tp(shrink(f))}" fill="none" stroke="#2F3E46" stroke-width="0.75" opacity="0.22" stroke-dasharray="4,4"/>`).join("")}
+    ${[V_PSL, V_EF, V_PS].map(v => `<line x1="${CENTROID.x}" y1="${CENTROID.y}" x2="${v.x}" y2="${v.y}" stroke="#2F3E46" stroke-width="0.75" opacity="0.22"/>`).join("")}
+    <path d="${clientPath}" fill="${zone.color}" opacity="0.25" stroke="${zone.color}" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="${efPt.x}" cy="${efPt.y}" r="7" fill="#5B8A72" stroke="white" stroke-width="2"/>
+    <circle cx="${psPt.x}" cy="${psPt.y}" r="7" fill="#C59D5F" stroke="white" stroke-width="2"/>
+    <circle cx="${pslPt.x}" cy="${pslPt.y}" r="7" fill="#7C6A92" stroke="white" stroke-width="2"/>
+    <circle cx="${CENTROID.x}" cy="${CENTROID.y}" r="3" fill="#2F3E46" opacity="0.3"/>
+    <text x="${V_PSL.x}" y="${V_PSL.y - 14}" text-anchor="middle" font-size="14" font-weight="700" fill="#7C6A92">PSL</text>
+    <text x="${V_PSL.x}" y="${V_PSL.y - 1}" text-anchor="middle" font-size="10" fill="#6B7280">Psychological</text>
+    <text x="${V_EF.x - 6}" y="${V_EF.y + 18}" text-anchor="middle" font-size="14" font-weight="700" fill="#5B8A72">EF</text>
+    <text x="${V_EF.x - 6}" y="${V_EF.y + 30}" text-anchor="middle" font-size="10" fill="#6B7280">Environmental</text>
+    <text x="${V_PS.x + 6}" y="${V_PS.y + 18}" text-anchor="middle" font-size="14" font-weight="700" fill="#C59D5F">PS</text>
+    <text x="${V_PS.x + 6}" y="${V_PS.y + 30}" text-anchor="middle" font-size="10" fill="#6B7280">Physiological</text>
+    <text x="${pslPt.x + 18}" y="${pslPt.y + 5}" text-anchor="start" font-size="13" font-weight="700" fill="${getAxisColor(psl)}">${psl.toFixed(0)}</text>
+    <text x="${efPt.x - 18}" y="${efPt.y + 5}" text-anchor="end" font-size="13" font-weight="700" fill="${getAxisColor(ef)}">${ef.toFixed(0)}</text>
+    <text x="${psPt.x + 18}" y="${psPt.y + 5}" text-anchor="start" font-size="13" font-weight="700" fill="${getAxisColor(ps)}">${ps.toFixed(0)}</text>
+    <text x="${CENTROID.x + 2}" y="${CENTROID.y - 10}" text-anchor="middle" font-size="9" fill="#888" opacity="0.5">center = 0</text>
+  </svg>`;
+}
+
+// ============================================================
+// RENDER ENGINE
+// ============================================================
+
+function render() {
+  const app = document.getElementById("app");
+  const s = state;
+
+  // Step bar
+  const steps = ["Intro", "Environment", "Physiology", "Psychology", "Results"];
+  let html = `<div class="step-bar">`;
+  for (let i = 0; i < steps.length; i++) {
+    const cls = i < s.step ? "step-pip done" : i === s.step ? "step-pip active" : "step-pip";
+    html += `<div class="${cls}" title="${steps[i]}"></div>`;
+  }
+  html += `</div>`;
+
+  // Pages
+  if (s.step === 0) html += renderIntro();
+  else if (s.step === 1) html += renderEF();
+  else if (s.step === 2) html += renderPS();
+  else if (s.step === 3) html += renderPSL();
+  else if (s.step === 4) html += renderResults();
+
+  app.innerHTML = html;
+  bindEvents();
+}
+
+// ============================================================
+// PAGE: INTRO
+// ============================================================
+
+function renderIntro() {
+  return `
+    <div class="card" style="padding:36px 28px; max-width:600px; margin:0 auto;">
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="font-size:24px; font-weight:700; color:#2F3E46; margin-bottom:4px;">Dietary Destabilization Triangle</div>
+        <div style="font-size:14px; color:#7C6A92; font-style:italic;">Understanding why consistency feels harder than it should</div>
+      </div>
+
+      <div style="font-size:13px; color:#1F2933; line-height:1.7; margin-bottom:16px;">
+        This short questionnaire looks at how much friction your daily life creates around eating consistently.
+        Don't overthink it — your best guesses are all we need.
+      </div>
+
+      <div style="font-size:13px; color:#1F2933; line-height:1.7; margin-bottom:16px;">
+        Your results show up on a simple triangle that maps where your life is making steady eating
+        easier or harder — across your environment, your body signals, and your mental bandwidth.
+      </div>
+
+      <div style="font-size:13px; color:#6B7280; line-height:1.7; margin-bottom:20px;">
+        Takes about 5 minutes. You'll get something you can act on — and you can retake this anytime things change.
+      </div>
+
+      <div style="text-align:center; margin-bottom:20px;">
+        <button class="btn btn-primary" onclick="goStep(1)">Start Assessment</button>
+      </div>
+
+      <details style="margin-top:4px; border-top:1px solid #e0e0e0; padding-top:12px;">
+        <summary style="font-size:13px; font-weight:600; color:#5B8A72; cursor:pointer; padding:4px 0;">Why friction matters</summary>
+        <div style="margin-top:12px;">
+          <div style="font-size:15px; font-weight:700; color:#2F3E46; margin-bottom:8px;">Why focus on friction?</div>
+
+          <div style="font-size:13px; color:#1F2933; line-height:1.7; margin-bottom:12px;">
+            Because the eating pattern that actually works is the one you can keep up consistently —
+            <strong>not the one that looks best on paper.</strong>
+          </div>
+
+          <div style="font-size:13px; color:#1F2933; line-height:1.7; margin-bottom:12px;">
+            A lot of people have the knowledge and the intention, but their daily life makes
+            following through harder than it should be. Others do well on a simpler plan because
+            their routine makes consistency feel natural.
+          </div>
+
+          <div style="font-size:13px; color:#1F2933; line-height:1.7;">
+            The difference is usually friction — the small, everyday things that make eating well
+            feel easy or exhausting. This assessment helps you see where that friction is coming from
+            so you can start to reduce it.
+          </div>
+        </div>
+      </details>
+    </div>
+  `;
+}
+
+// ============================================================
+// PAGE: ENVIRONMENTAL FRICTION
+// ============================================================
+
+function renderEF() {
+  const s = state;
+  return `
+    <div class="card">
+      <div class="card-title" style="color:#5B8A72;">Environmental Friction</div>
+      <div class="card-subtitle">Your food environment — kitchen, access, grocery, budget</div>
+
+      <div class="field">
+        <div class="field-label">Work Pattern</div>
+        <select data-key="workPattern" value="${s.workPattern}">
+          <option value="remote" ${s.workPattern==="remote"?"selected":""}>Remote — work from home</option>
+          <option value="hybrid" ${s.workPattern==="hybrid"?"selected":""}>Hybrid — some days on-site</option>
+          <option value="onsite" ${s.workPattern==="onsite"?"selected":""}>On-site — at office daily</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Kitchen Setup</div>
+        <select data-key="kitchen">
+          <option value="full" ${s.kitchen==="full"?"selected":""}>Full kitchen — oven, stovetop, fridge, counter space</option>
+          <option value="basic" ${s.kitchen==="basic"?"selected":""}>Basic — fridge, microwave, limited counter</option>
+          <option value="minimal" ${s.kitchen==="minimal"?"selected":""}>Minimal — microwave/mini-fridge only</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Willingness to cook (1 = avoid, 5 = love it)</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="range" min="1" max="5" step="1" value="${s.willingness}" data-key="willingness" data-type="int">
+          <span style="font-weight:700; color:#2F3E46; min-width:20px;">${s.willingness}</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Budget flexibility (1 = very tight, 5 = flexible)</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="range" min="1" max="5" step="1" value="${s.budget}" data-key="budget" data-type="int">
+          <span style="font-weight:700; color:#2F3E46; min-width:20px;">${s.budget}</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Drive time to grocery store</div>
+        <select data-key="groceryDrive">
+          <option value="0" ${s.groceryDrive==="0"?"selected":""}>5 min or less</option>
+          <option value="3" ${s.groceryDrive==="3"?"selected":""}>5–10 min</option>
+          <option value="6" ${s.groceryDrive==="6"?"selected":""}>10–15 min</option>
+          <option value="9" ${s.groceryDrive==="9"?"selected":""}>15–20 min</option>
+          <option value="12" ${s.groceryDrive==="12"?"selected":""}>20–30 min</option>
+          <option value="15" ${s.groceryDrive==="15"?"selected":""}>30+ min</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Grocery delivery available?</div>
+        <select data-key="groceryDelivery">
+          <option value="no" ${s.groceryDelivery==="no"?"selected":""}>No</option>
+          <option value="yes" ${s.groceryDelivery==="yes"?"selected":""}>Yes</option>
+        </select>
+      </div>
+
+      <div class="card" style="background:#f9f9f9; border:1px dashed #ccc; padding:16px;">
+        <div style="font-size:13px; font-weight:600; color:#2F3E46; margin-bottom:4px;">Meal Options — Near Home</div>
+        <div class="field-help" style="margin-bottom:10px;">
+          Just estimate from memory — don't try to count exactly.
+          Include anywhere you'd realistically get a meal from more than once: restaurants, delis, cafes, food trucks, delivery apps.
+          Skip one-off or special occasion places.
+        </div>
+        <div style="font-size:11px; color:#6B7280; padding:8px 10px; background:#fff; border-radius:4px; border:1px solid #E5E7EB; margin-bottom:12px;">
+          If a place delivers to you, count it in the first tier — delivery and a short trip are roughly the same friction.
+          For everything else, estimate how long it takes you to get there.
+        </div>
+        ${renderFoodCountInputs("home")}
+      </div>
+
+      ${s.workPattern !== "remote" ? `
+      <div class="card" style="background:#f9f9f9; border:1px dashed #ccc; padding:16px; margin-top:12px;">
+        <div style="font-size:13px; font-weight:600; color:#2F3E46; margin-bottom:4px;">Meal Options — Near Work</div>
+        <div class="field-help" style="margin-bottom:10px;">Same idea — roughly how many meal options are available near your workplace?</div>
+        ${renderFoodCountInputs("work")}
+      </div>` : ""}
+    </div>
+
+    ${renderSectionPreview("Environmental Friction", computeEF(s), "#5B8A72", "efPreviewOpen")}
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(0)">Back</button>
+      <button class="btn btn-primary" onclick="goStep(2)">Next: Physiology</button>
+    </div>
+  `;
+}
+
+function renderFoodCountInputs(prefix) {
+  const easyCount = state[prefix + "Easy"] + state[prefix + "MedEasy"];
+  const hasEnoughEasy = easyCount >= 10;
+
+  const tiers = [
+    { key: "Easy", label: "Delivers to you, or ≤5 min away", stateKey: prefix + "Easy", color: "#5B8A72" },
+    { key: "MedEasy", label: "5–10 min away", stateKey: prefix + "MedEasy", color: "#7A9E6B" },
+    { key: "Medium", label: "10–15 min away", stateKey: prefix + "Medium", color: "#C59D5F" },
+    { key: "Hard", label: "15+ min away", stateKey: prefix + "Hard", color: "#C59D5F" },
+  ];
+
+  let html = tiers.map((t, i) => {
+    const isHard = i === 3;
+    const dimmed = isHard && hasEnoughEasy;
+    return `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; ${dimmed ? 'opacity:0.65;' : ''}">
+      <span style="font-size:12px; color:${t.color};">${t.label}</span>
+      <input type="number" min="0" max="30" value="${state[t.stateKey]}" data-key="${t.stateKey}" data-type="int"
+        style="width:60px; text-align:center; padding:4px; border-radius:4px; border:1px solid #ccc; font-size:13px;">
+    </div>`;
+  }).join("");
+
+  if (hasEnoughEasy) {
+    html += `<div style="font-size:11px; color:#6B7280; margin-top:4px; font-style:italic;">You've got plenty of close options — the 15+ min tier won't change your results much.</div>`;
+  }
+
+  return html;
+}
+
+// ============================================================
+// PAGE: PHYSIOLOGICAL FRICTION
+// ============================================================
+
+function renderPS() {
+  const s = state;
+  const sleepLabels = ["", "Exhausted", "Tired", "Okay", "Good", "Great"];
+  const freqLabels = ["", "Never", "Rarely", "Sometimes", "Often", "Always"];
+
+  return `
+    <div class="card">
+      <div class="card-title" style="color:#C59D5F;">Physiological Friction</div>
+      <div class="card-subtitle">Sleep, energy symptoms, hunger patterns</div>
+
+      <div style="font-size:13px; font-weight:600; color:#2F3E46; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid #C59D5F;">Sleep</div>
+
+      <div class="field">
+        <div class="field-label">Preferred hours of sleep</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="range" min="5" max="10" step="0.5" value="${s.preferredSleep}" data-key="preferredSleep" data-type="float">
+          <span style="font-weight:700; color:#2F3E46; min-width:30px;">${s.preferredSleep}h</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Actual hours of sleep (typical night)</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="range" min="3" max="10" step="0.5" value="${s.actualSleep}" data-key="actualSleep" data-type="float">
+          <span style="font-weight:700; color:#2F3E46; min-width:30px;">${s.actualSleep}h</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">How rested do you feel? — ${sleepLabels[s.restedness]}</div>
+        ${renderLikert("restedness", s.restedness, ["Exhausted", "Tired", "Okay", "Good", "Great"], 1)}
+      </div>
+
+      <div style="font-size:13px; font-weight:600; color:#2F3E46; margin:20px 0 12px; padding-bottom:6px; border-bottom:2px solid #C59D5F;">Energy Symptoms</div>
+      <div class="field-help" style="margin-bottom:12px;">In a typical week, how often do you experience...</div>
+
+      <div class="field">
+        <div class="field-label">Energy crashes — ${freqLabels[s.crashes]}</div>
+        ${renderLikert("crashes", s.crashes, ["Never", "Rarely", "Sometimes", "Often", "Always"], 1)}
+      </div>
+      <div class="field">
+        <div class="field-label">Brain fog / difficulty concentrating — ${freqLabels[s.foggy]}</div>
+        ${renderLikert("foggy", s.foggy, ["Never", "Rarely", "Sometimes", "Often", "Always"], 1)}
+      </div>
+      <div class="field">
+        <div class="field-label">Hangry / shaky / irritable — ${freqLabels[s.hangry]}</div>
+        ${renderLikert("hangry", s.hangry, ["Never", "Rarely", "Sometimes", "Often", "Always"], 1)}
+      </div>
+      <div class="field">
+        <div class="field-label">Post-meal sluggishness — ${freqLabels[s.postMeal]}</div>
+        ${renderLikert("postMeal", s.postMeal, ["Never", "Rarely", "Sometimes", "Often", "Always"], 1)}
+      </div>
+
+      <div style="font-size:13px; font-weight:600; color:#2F3E46; margin:20px 0 12px; padding-bottom:6px; border-bottom:2px solid #C59D5F;">Hunger Pattern</div>
+
+      <div class="field">
+        <div class="field-label">How many distinct times per day do you feel hungry?</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="range" min="0" max="7" step="1" value="${s.hungerCount}" data-key="hungerCount" data-type="int" id="hungerCountSlider">
+          <span style="font-weight:700; color:#2F3E46; min-width:20px;">${s.hungerCount}</span>
+        </div>
+      </div>
+
+      ${renderHungerEntries(s)}
+    </div>
+
+    ${renderSectionPreview("Physiological Friction", computePS(s), "#C59D5F", "psPreviewOpen")}
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(1)">Back</button>
+      <button class="btn btn-primary" onclick="goStep(3)">Next: Psychology</button>
+    </div>
+  `;
+}
+
+function renderLikert(key, value, labels, startVal) {
+  startVal = startVal || 0;
+  const colors = (i) => {
+    const v = i + startVal;
+    if (labels.length === 5) {
+      if (i <= 1) return "#5B8A72";
+      if (i === 2) return "#C59D5F";
+      return "#C59D5F";
+    }
+    return "#5B8A72";
+  };
+  return `<div class="likert">${labels.map((l, i) => {
+    const v = i + startVal;
+    const active = value === v;
+    const c = colors(i);
+    const style = active
+      ? `border:2px solid ${c}; background:${c}15; color:${c}; font-weight:600;`
+      : ``;
+    return `<button style="${style}" class="${active ? 'active' : ''}" onclick="setLikert('${key}',${v})">${l}</button>`;
+  }).join("")}</div>`;
+}
+
+function renderHungerEntries(s) {
+  const times = [
+    { v: "early_morning", l: "Early morning (5–8am)" },
+    { v: "mid_morning", l: "Mid morning (8–11am)" },
+    { v: "midday", l: "Midday (11am–1pm)" },
+    { v: "early_afternoon", l: "Early afternoon (1–3pm)" },
+    { v: "late_afternoon", l: "Late afternoon (3–5pm)" },
+    { v: "evening", l: "Evening (5–7pm)" },
+    { v: "night", l: "Night (7–10pm)" },
+    { v: "late_night", l: "Late night (10pm+)" },
+  ];
+  const intensities = ["mild", "moderate", "intense"];
+  const intColors = { mild: "#5B8A72", moderate: "#C59D5F", intense: "#C59D5F" };
+  const intLabels = { mild: "Mild", moderate: "Moderate", intense: "Intense" };
+
+  let html = "";
+  for (let i = 0; i < s.hungerCount; i++) {
+    const pt = s.hungerPoints[i] || { time: "midday", intensity: "moderate" };
+    html += `<div class="hunger-entry">
+      <span style="font-size:12px; font-weight:600; color:#2F3E46; width:20px;">#${i+1}</span>
+      <select onchange="setHungerTime(${i}, this.value)">
+        ${times.map(t => `<option value="${t.v}" ${pt.time===t.v?"selected":""}>${t.l}</option>`).join("")}
+      </select>
+      <div class="intensity-btns">
+        ${intensities.map(int => {
+          const active = pt.intensity === int;
+          const c = intColors[int];
+          const style = active ? `border:2px solid ${c}; background:${c}15; color:${c}; font-weight:600;` : ``;
+          return `<button style="${style}" class="${active?'active':''}" onclick="setHungerIntensity(${i},'${int}')">${intLabels[int]}</button>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }
+  return html;
+}
+
+// ============================================================
+// PAGE: PSYCHOLOGICAL STRESS LOAD
+// ============================================================
+
+function renderPSL() {
+  const s = state;
+  const stressLabels = ["Never", "Rarely", "Sometimes", "Often", "Always"];
+
+  return `
+    <div class="card">
+      <div class="card-title" style="color:#7C6A92;">Psychological Stress Load</div>
+      <div class="card-subtitle">Cognitive bandwidth for food-related logistics</div>
+
+      <div style="font-size:13px; font-weight:600; color:#2F3E46; margin-bottom:12px; padding-bottom:6px; border-bottom:2px solid #7C6A92;">In a typical week, how often do you experience...</div>
+
+      <div class="field">
+        <div class="field-label">I feel rushed and short on time — ${stressLabels[s.rushed]}</div>
+        <div class="field-help">Not enough time to handle daily basics like meals and errands</div>
+        ${renderLikert("rushed", s.rushed, stressLabels, 0)}
+      </div>
+
+      <div class="field">
+        <div class="field-label">My plans get disrupted by unexpected things — ${stressLabels[s.disruptions]}</div>
+        <div class="field-help">Something comes up that derails what you had planned</div>
+        ${renderLikert("disruptions", s.disruptions, stressLabels, 0)}
+      </div>
+
+      <div class="field">
+        <div class="field-label">I feel mentally overloaded — ${stressLabels[s.overload]}</div>
+        <div class="field-help">Too many things competing for your attention</div>
+        ${renderLikert("overload", s.overload, stressLabels, 0)}
+      </div>
+
+      <div class="field">
+        <div class="field-label">I can't do things as well as I'd like — ${stressLabels[s.cantExecute]}</div>
+        <div class="field-help">You know what to do but can't follow through</div>
+        ${renderLikert("cantExecute", s.cantExecute, stressLabels, 0)}
+      </div>
+
+      <div class="field">
+        <div class="field-label">I feel mentally drained by end of day — ${stressLabels[s.drained]}</div>
+        <div class="field-help">No energy left to prep for tomorrow</div>
+        ${renderLikert("drained", s.drained, stressLabels, 0)}
+      </div>
+
+      <div style="font-size:13px; font-weight:600; color:#2F3E46; margin:20px 0 12px; padding-bottom:6px; border-bottom:2px solid #7C6A92;">Schedule Predictability</div>
+
+      <div class="field">
+        <div class="field-label">How predictable is your weekly schedule?</div>
+        <div class="field-help">Can you plan meals, shopping, and prep around your routine?</div>
+        <select data-key="predictability">
+          <option value="highly_predictable" ${s.predictability==="highly_predictable"?"selected":""}>Highly predictable — same routine daily</option>
+          <option value="mostly_predictable" ${s.predictability==="mostly_predictable"?"selected":""}>Mostly predictable — occasional variation</option>
+          <option value="mixed" ${s.predictability==="mixed"?"selected":""}>Mixed — some days predictable, some not</option>
+          <option value="mostly_unpredictable" ${s.predictability==="mostly_unpredictable"?"selected":""}>Mostly unpredictable — frequent changes</option>
+          <option value="chaotic" ${s.predictability==="chaotic"?"selected":""}>Chaotic — never know what's coming</option>
+        </select>
+      </div>
+    </div>
+
+    ${renderSectionPreview("Psychological Stress Load", computePSL(s), "#7C6A92", "pslPreviewOpen")}
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goStep(2)">Back</button>
+      <button class="btn btn-primary" onclick="goStep(4)">See My Results</button>
+    </div>
+  `;
+}
+
+// ============================================================
+// PAGE: RESULTS
+// ============================================================
+
+function renderResults() {
+  const s = state;
+  const ef = computeEF(s);
+  const ps = computePS(s);
+  const psl = computePSL(s);
+  const composite = computeComposite(ef, ps, psl);
+  const zone = getCompositeZone(composite.friction);
+  const bottlenecks = getBottleneck(ef, ps, psl);
+  const interpretation = getInterpretation(ef, ps, psl, composite);
+  const imbalance = Math.max(ef, ps, psl) - Math.min(ef, ps, psl);
+
+  // Store for external use
+  state.efScore = ef;
+  state.psScore = ps;
+  state.pslScore = psl;
+
+  return `
+    <!-- Composite banner -->
+    <div class="result-banner">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+        <div>
+          <div class="score-label-upper">Composite Friction Score</div>
+          <div class="score-big" style="color:${zone.color};">${composite.friction.toFixed(1)}</div>
+          <div class="score-label" style="color:${zone.color};">${zone.label}</div>
+        </div>
+        <div style="text-align:right; font-size:12px; opacity:0.8; line-height:1.8;">
+          <div>Environmental: ${ef.toFixed(1)} / 100</div>
+          <div>Physiological: ${ps.toFixed(1)} / 100</div>
+          <div>Psychological: ${psl.toFixed(1)} / 100</div>
+          <div style="border-top:1px solid rgba(255,255,255,0.3); padding-top:4px; margin-top:4px; font-weight:700; font-size:14px;">
+            Composite: ${composite.friction.toFixed(1)} / 100
+          </div>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:${composite.friction}%;"></div>
+        <div class="progress-mark" style="left:33%;"></div>
+        <div class="progress-mark" style="left:66%;"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.5; margin-top:4px;">
+        <span>0 — Lowest friction</span>
+        <span>100 — Highest friction</span>
+      </div>
+    </div>
+
+    <div class="results-grid">
+      <!-- Left: Triangle -->
+      <div>
+        <div class="card" style="padding:12px;">
+          ${renderTriangleSVG(ef, ps, psl)}
+        </div>
+
+        <!-- Axis bars -->
+        <div class="card">
+          <div style="font-size:14px; font-weight:700; color:#2F3E46; margin-bottom:12px;">Axis Scores</div>
+          ${renderScoreBar("Environmental Friction", ef, 100, getAxisColor(ef))}
+          ${renderScoreBar("Physiological Friction", ps, 100, getAxisColor(ps))}
+          ${renderScoreBar("Psychological Stress Load", psl, 100, getAxisColor(psl))}
+          <div style="margin-top:10px; padding:8px 10px; background:#F0F2F1; border-radius:4px; font-size:12px; color:#6B7280;">
+            <strong>Main source of strain:</strong> ${bottlenecks.join(" + ")}<br/>
+            <strong>Spread between axes:</strong> ${imbalance.toFixed(0)} points
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Interpretation + Prompt placeholder -->
+      <div>
+        <div class="card">
+          <div style="font-size:14px; font-weight:700; color:#2F3E46; margin-bottom:10px;">Your Assessment</div>
+          <div style="font-size:13px; color:#1F2933; line-height:1.6; padding:12px; background:${zone.color}12; border-radius:6px; border-left:3px solid ${zone.color};">
+            ${interpretation}
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:14px; font-weight:700; color:#2F3E46; margin-bottom:10px;">What This Means</div>
+          ${renderWhatThisMeans(ef, ps, psl, s)}
+        </div>
+
+        ${renderArchetypeCard(s)}
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:20px;">
+      <button class="btn btn-secondary" onclick="goStep(3)">Back to Edit</button>
+      <button class="btn btn-primary" onclick="goStep(0)">Start Over</button>
+    </div>
+  `;
+}
+
+function getDetailedInsights(s) {
+  const insights = [];
+
+  // --- EF insights ---
+  const hasWork = s.workPattern !== "remote";
+  const homeCounts = { easy: s.homeEasy, medEasy: s.homeMedEasy, medium: s.homeMedium, hard: s.homeHard };
+  const homeTotal = s.homeEasy + s.homeMedEasy + s.homeMedium + s.homeHard;
+  const homeEasy = s.homeEasy + s.homeMedEasy;
+
+  if (homeEasy === 0 && homeTotal > 0) {
+    insights.push({ axis: "ef", color: "#5B8A72", text: `You have ${homeTotal} home meal option${homeTotal > 1 ? 's' : ''}, but none that take under 5 minutes. There's food around — but nothing quick enough to fall back on when energy is low.` });
+  } else if (homeEasy > 0 && homeEasy < 5) {
+    insights.push({ axis: "ef", color: "#5B8A72", text: `Only ${homeEasy} quick option${homeEasy > 1 ? 's' : ''} near home. That's a pretty thin safety net — if one or two aren't available, you're back to meals that take real effort.` });
+  }
+
+  if (hasWork) {
+    const workEasy = s.workEasy + s.workMedEasy;
+    const workTotal = s.workEasy + s.workMedEasy + s.workMedium + s.workHard;
+    if (workEasy === 0 && workTotal > 0) {
+      insights.push({ axis: "ef", color: "#5B8A72", text: `Your work environment has meal options, but nothing quick — every work meal takes planning or effort.` });
+    }
+  }
+
+  if (s.kitchen === "minimal") {
+    insights.push({ axis: "ef", color: "#5B8A72", text: `A minimal kitchen means you're mostly relying on external food or very simple prep — that's a real practical constraint, not a motivation issue.` });
+  }
+
+  const budgetMult = BUDGET_MULTIPLIERS[s.budget - 1].mult;
+  if (budgetMult >= 1.4) {
+    const ampPct = Math.round((budgetMult - 1) * 100);
+    insights.push({ axis: "ef", color: "#5B8A72", text: `Budget pressure is making your food environment feel about ${ampPct}% harder to work with. It narrows what's realistically available to you.` });
+  }
+
+  if (s.willingness <= 2) {
+    insights.push({ axis: "ef", color: "#5B8A72", text: `Low willingness to prep right now isn't laziness — it's a sign that cooking currently adds more strain than it removes.` });
+  }
+
+  // --- PS insights ---
+  const sleep = scoreSleep(s.preferredSleep, s.actualSleep, s.restedness);
+  const energy = scoreEnergy(s.crashes, s.foggy, s.hangry, s.postMeal);
+
+  if (sleep.debt >= 2 && s.restedness >= 4) {
+    insights.push({ axis: "ps", color: "#C59D5F", text: `You're getting about ${sleep.debt.toFixed(1)} hours less sleep than you'd like, though you still feel rested. That's worth noting — feeling okay doesn't always mean the body isn't affected underneath.` });
+  } else if (sleep.debt >= 2) {
+    insights.push({ axis: "ps", color: "#C59D5F", text: `A ${sleep.debt.toFixed(1)}-hour gap between the sleep you want and the sleep you're getting can quietly affect hunger cues and energy throughout the day.` });
+  }
+
+  const elevatedSymptoms = [];
+  if (s.crashes >= 3) elevatedSymptoms.push("energy crashes");
+  if (s.foggy >= 3) elevatedSymptoms.push("brain fog");
+  if (s.hangry >= 3) elevatedSymptoms.push("irritability when hungry");
+  if (elevatedSymptoms.length > 0) {
+    insights.push({ axis: "ps", color: "#C59D5F", text: `You're noticing ${elevatedSymptoms.join(", ")} regularly. When your body hits these states, making thoughtful food choices becomes genuinely harder — that's a real physical experience, not a mindset issue.` });
+  }
+
+  const hungerCount = s.hungerPoints.length;
+  const lateIntense = s.hungerPoints.filter(p => (p.time === "night" || p.time === "late_night") && p.intensity === "intense").length;
+  if (lateIntense > 0) {
+    insights.push({ axis: "ps", color: "#C59D5F", text: `You're feeling intense hunger late at night — a time when energy for making careful choices is naturally at its lowest. That combination makes it much harder to follow through on intentions.` });
+  }
+  if (hungerCount >= 5) {
+    insights.push({ axis: "ps", color: "#C59D5F", text: `${hungerCount} hunger moments through the day suggests your current eating rhythm isn't quite matching what your body needs.` });
+  }
+
+  // --- PSL insights ---
+  const stress = scoreStressItems(s.rushed, s.disruptions, s.overload, s.cantExecute, s.drained);
+  const pred = scorePredictability(s.predictability, stress.baseStress);
+
+  const highStressItems = [];
+  if (s.rushed >= 3) highStressItems.push("feeling rushed");
+  if (s.disruptions >= 3) highStressItems.push("unexpected disruptions");
+  if (s.overload >= 3) highStressItems.push("mental overload");
+  if (s.cantExecute >= 3) highStressItems.push("inability to follow through on plans");
+  if (s.drained >= 3) highStressItems.push("feeling drained");
+
+  if (highStressItems.length >= 3) {
+    insights.push({ axis: "psl", color: "#7C6A92", text: `You're feeling pressure from several directions at once (${highStressItems.join(", ")}). When that many things are competing for your attention, food planning is usually one of the first things to slip — and that makes sense.` });
+  } else if (highStressItems.length > 0) {
+    insights.push({ axis: "psl", color: "#7C6A92", text: `One thing that stands out: ${highStressItems.join(" and ")}. ${highStressItems.length > 1 ? 'These tend to' : 'This tends to'} use up the mental energy that would otherwise go toward food planning.` });
+  }
+
+  if (pred.contribution >= 10) {
+    insights.push({ axis: "psl", color: "#7C6A92", text: `Your unpredictable schedule is adding extra strain (about ${pred.contribution.toFixed(0)} points worth) on top of everything else. Fixed meal plans are unlikely to hold — what you need are flexible defaults that move with your day.` });
+  }
+
+  return insights;
+}
+
+function renderWhatThisMeans(ef, ps, psl, s) {
+  const highCount = [ef, ps, psl].filter(v => v >= 50).length;
+  let summaryHtml = '';
+
+  // Summary framing
+  if (highCount === 0) {
+    summaryHtml = `<div class="note-card" style="background:#EDF3EF; border-color:#5B8A72;">No single area is critically high. You have a solid foundation to work with — straightforward approaches to food planning should feel manageable.</div>`;
+  } else if (highCount >= 2) {
+    summaryHtml = `<div class="note-card" style="background:#F5F0E8; border-color:#C59D5F;">
+      Friction is showing up across several areas at once. Rather than trying to fix everything, it helps to simplify broadly — fewer daily food decisions, easier default options, and stabilizing one thing at a time.
+    </div>`;
+  } else if (ef >= 50) {
+    summaryHtml = `<div class="note-card" style="background:#EDF3EF; border-color:#5B8A72;">Your food environment is where the most friction is coming from — the options around you are making consistency harder than it needs to be. Easing the practical barriers here is likely where you'd feel the biggest difference.</div>`;
+  } else if (ps >= 50) {
+    summaryHtml = `<div class="note-card" style="background:#F5F0E8; border-color:#C59D5F;">Your body signals — sleep, energy, hunger — are where the most friction is coming from right now. Steadying these rhythms is likely where things would start to feel easier across the board.</div>`;
+  } else {
+    summaryHtml = `<div class="note-card" style="background:#F0ECF3; border-color:#7C6A92;">Mental bandwidth is where the most strain is showing up — there's not much left over for food logistics by the time everything else gets handled. Simplifying your food routine (fewer decisions, more autopilot) is where things are likely to ease up first.</div>`;
+  }
+
+  // Detailed insights
+  const insights = getDetailedInsights(s);
+  if (insights.length === 0) return summaryHtml;
+
+  // Cap at 4 most relevant
+  const shown = insights.slice(0, 4);
+  let insightsHtml = `<div style="margin-top:12px; font-size:13px; font-weight:600; color:#2F3E46;">What Stands Out</div>`;
+  insightsHtml += shown.map(ins => `
+    <div style="margin-top:8px; padding:10px 12px; background:${ins.color}08; border-left:3px solid ${ins.color}; border-radius:4px; font-size:12px; color:#1F2933; line-height:1.5;">
+      ${ins.text}
+    </div>
+  `).join('');
+
+  return summaryHtml + insightsHtml;
+}
+
+function renderArchetypeCard(s) {
+  const report = generateArchetypeReport(s);
+  const axisColors = { ef: "#5B8A72", ps: "#C59D5F", psl: "#7C6A92" };
+  const accentColor = axisColors[report.dominantAxis] || "#2F3E46";
+
+  let html = `
+    <div class="card" style="border-top: 3px solid ${accentColor};">
+      <div style="font-size:14px; font-weight:700; color:#2F3E46; margin-bottom:16px;">Your Friction Archetype</div>
+
+      <div style="font-size:18px; font-weight:700; color:${accentColor}; margin-bottom:10px;">${report.archetypeName}</div>
+
+      <div style="font-size:13px; color:#1F2933; line-height:1.6; margin-bottom:16px;">
+        ${report.explanation}
+      </div>
+
+      <div style="padding:12px; background:#F0F2F1; border-radius:6px; margin-bottom:16px;">
+        <div style="font-size:12px; font-weight:700; color:#2F3E46; margin-bottom:4px;">Where Things Can Start to Shift</div>
+        <div style="font-size:13px; color:#1F2933; line-height:1.5;">${report.leveragePoint}</div>
+      </div>`;
+
+  if (report.secondary) {
+    html += `
+      <div style="padding:10px 12px; background:${accentColor}08; border-left:3px solid ${accentColor}; border-radius:4px; margin-bottom:16px; font-size:12px; color:#1F2933; line-height:1.5;">
+        <strong style="color:#2F3E46;">Secondary Factor:</strong> ${report.secondary}
+      </div>`;
+  }
+
+  html += `
+      <div style="margin-top:4px;">
+        <div style="font-size:12px; font-weight:700; color:#2F3E46; margin-bottom:8px;">Starter AI Prompt</div>
+        <div style="font-size:11px; color:#6B7280; margin-bottom:8px;">Copy this into ChatGPT, Claude, or any AI assistant for personalised guidance.</div>
+        <div id="archetype-prompt" style="background:#2F3E46; color:#E5E7EB; font-size:12px; line-height:1.6; padding:16px; border-radius:6px; font-family:monospace; white-space:pre-wrap; position:relative; max-height:500px; overflow-y:auto;">
+${report.promptText}</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+          <button onclick="copyPrompt()" id="copy-prompt-btn" style="padding:8px 16px; border-radius:6px; border:1px solid ${accentColor}; background:#fff; color:${accentColor}; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;">
+            Copy to Clipboard
+          </button>
+          <button onclick="downloadSkillFile()" id="download-skill-btn" style="padding:8px 16px; border-radius:6px; border:1px solid #2F3E46; background:#2F3E46; color:#fff; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s;">
+            Download Claude Skill (.md)
+          </button>
+        </div>
+        <div style="font-size:11px; color:#6B7280; margin-top:8px; line-height:1.4;">
+          <strong>Starter Prompt</strong> — paste into any AI chat for a one-off conversation.<br/>
+          <strong>Claude Skill</strong> — add to a Claude Project so this reasoning framework persists across conversations.
+        </div>
+      </div>
+    </div>`;
+
+  return html;
+}
+
+function copyPrompt() {
+  const text = document.getElementById('archetype-prompt').textContent;
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    const btn = document.getElementById('copy-prompt-btn');
+    btn.textContent = 'Copied!';
+    btn.style.background = '#2F3E46';
+    btn.style.color = '#fff';
+    setTimeout(() => {
+      btn.textContent = 'Copy to Clipboard';
+      btn.style.background = '#fff';
+      btn.style.color = btn.style.borderColor;
+    }, 2000);
+  });
+}
+
+function buildSkillFile(report, scores) {
+  const axisNames = { ef: "Environmental Friction", ps: "Physiological Friction", psl: "Psychological Stress Load" };
+  const primaryAxis = axisNames[report.dominantAxis] || "Environmental Friction";
+  const generatedDate = new Date().toISOString().slice(0, 10);
+  const skillSlug = "friction-reduction-coach-" + report.archetypeName.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-");
+
+  return `---
+name: ${skillSlug}
+description: Activates when the user is trying to improve consistency, follow-through, routines, recovery, stability, or behavioral reliability. Especially relevant when the user mentions sleep issues, fatigue, burnout, stress, overwhelm, inconsistency, loss of structure, disrupted routines, difficulty sticking to plans, or difficulty maintaining habits. Uses the Dietary Destabilization Triangle framework to identify the primary source of friction and design structural changes that reduce reliance on motivation or discipline. Focuses on upstream constraint removal before downstream optimization. Only introduces food-system design when Environmental Friction is the dominant constraint.
+---
+
+# Skill: Friction Reduction Coach — ${report.archetypeName}
+
+Profile: ${report.archetypeName}
+Generated: ${generatedDate}
+Composite Friction: ${scores.composite} / 100
+Primary Area: ${primaryAxis}
+
+You help identify and reduce the primary source of friction that is disrupting someone's ability to follow through on planned behavior consistently.
+
+You use the Dietary Destabilization Triangle (DDT) framework, which measures friction across three dimensions: environment, physiology, and cognitive load. You don't give generic advice. You help people understand what's making consistency hard and address it at the source — whether that's their physical environment, their body signals, or their mental bandwidth.
+
+---
+
+## Activation Priority
+
+The primary objective is to reduce the dominant friction constraint identified by the assessment.
+
+**If Physiological Friction is dominant:** focus on stabilizing biological and recovery-related constraints such as sleep opportunity, sleep timing variability, fatigue drivers, circadian disruption, stimulant timing, or recovery instability.
+
+**If Psychological Stress Load is dominant:** focus on reducing cognitive load, unpredictability, planning overhead, time fragmentation, or decision fatigue.
+
+**If Environmental Friction is dominant:** focus on redesigning the physical food environment, defaults, and repeatable meal structure.
+
+Do not default to meal planning unless Environmental Friction is the primary driver. Food is treated as a downstream execution layer, not the primary problem, unless Environmental Friction is highest.
+
+This skill should activate for conversations like:
+"why can't I stay consistent" · "I keep falling off my routine" · "I can't stick to habits" · "my sleep is messed up" · "I feel too tired to follow through" · "I keep breaking my plan" · "I feel overwhelmed" · "I can't maintain structure" · "I start strong but drift" · "I can't keep things stable"
+
+Do not assume the user is asking for diet optimization unless they explicitly state it.
+
+---
+
+## Current User Context (update after reassessment)
+
+These scores were generated by the DDT assessment tool. If the user retakes the assessment, replace these values with the new results. This skill interprets the assessment result. The app is responsible for classification.
+
+Environmental Friction: ${scores.ef} / 100
+Physiological Friction: ${scores.ps} / 100
+Psychological Stress Load: ${scores.psl} / 100
+Composite Friction: ${scores.composite} / 100
+
+Profile:
+${report.archetypeName}
+
+What this means:
+${report.explanation}
+
+Where to start:
+${report.axisGuidance}
+
+---
+
+## Axis Routing
+
+How to approach the conversation depends on where the friction is coming from:
+
+**If Environmental Friction is dominant:**
+Focus on the food environment — food access, default meals, grocery logistics, and practical structure. This is the one axis where food-system design is the correct primary intervention.
+
+**If Physiological Friction is dominant:**
+Focus on stabilizing the biological or behavioral driver creating instability — sleep opportunity, sleep timing variability, fatigue drivers, recovery constraints, circadian disruption, stimulant timing, schedule compression.
+Do not reference meal planning, meal structure, or diet changes unless the user explicitly connects their physiological friction to eating patterns.
+The conversation should feel like it is addressing the constraint itself, not routing everything back to food.
+
+**If Psychological Stress Load is dominant:**
+Focus on reducing planning overhead, unpredictability, decision fatigue, time fragmentation, and cognitive load.
+Do not introduce food system changes until the primary cognitive or structural constraint is understood and addressed.
+The conversation should feel like it is helping reduce mental strain, not planning meals.
+
+Food is a downstream dependent variable when PS or PSL is dominant. Only introduce food context if:
+- the user explicitly connects the friction to eating patterns, or
+- the primary constraint has been sufficiently understood and addressed, and food structure would provide additional stability.
+
+---
+
+## How the Model Works
+
+The Dietary Destabilization Triangle measures three categories of friction that disrupt consistent follow-through:
+
+**Environmental Friction**
+How easy or hard it is to access and repeat planned behaviors in the user's real surroundings. Includes physical setup, available options, logistics, budget, and work environment.
+
+**Physiological Friction**
+How much sleep, energy, and bodily rhythms are undermining stability. Includes sleep debt, sleep timing variability, energy crashes, circadian disruption, hunger volatility, and stimulant timing.
+
+**Psychological Stress Load**
+How much time pressure, unpredictability, and cognitive load are wearing down follow-through capacity. Includes feeling rushed, disrupted, overloaded, stretched thin, decision-fatigued, and drained.
+
+The core idea:
+- Consistency gets easier when friction goes down.
+- The goal is to reduce friction at its source so that follow-through becomes more reliable and requires less effort.
+- A plan that looks good on paper but cannot be executed consistently under real conditions is not useful.
+
+Always start from what makes consistency easier to sustain in real life, not from what's theoretically ideal.
+
+---
+
+## What to Focus On
+
+Focus on:
+- reducing the primary source of friction at its origin
+- improving follow-through reliability
+- making planned behavior easier to repeat
+- building stable defaults and fallback options
+- creating something steady rather than something ideal
+
+Avoid:
+- generic nutrition advice
+- defaulting to meal planning when food is not the primary constraint
+- routines that require high discipline to maintain
+- adding complexity to someone who's already stretched
+
+Keep everything grounded in the user's real environment, real schedule, and real energy levels.
+
+---
+
+## What You're Working Toward
+
+These are the things you're trying to understand and help with over the course of a conversation. They should come up naturally, not be presented as a checklist.
+
+A. What's making follow-through feel hard right now
+B. Why that tends to disrupt consistency in everyday life
+C. What more stable, lower-friction behavior would look like for this person
+D. A repeatable structure they could realistically sustain
+E. Concrete defaults appropriate to the dominant axis (meals if EF; sleep/energy patterns if PS; simplified routines if PSL)
+F. What to fall back on when things go sideways or capacity is low
+G. The 3 changes most likely to reduce friction quickly
+H. What "better" looks like day-to-day — not in outcomes, but in how consistent behavior feels
+
+Not every conversation will cover all of these. Use your judgment. But always stay grounded in the friction model and the user's profile.
+
+---
+
+## How the Conversation Should Flow
+
+### Phase 1 — Interpret the friction signal
+Start by explaining what type of friction is dominant and how it typically disrupts follow-through.
+Interpret friction in terms of consistency mechanics, not nutrition mechanics.
+When PS or PSL is dominant, avoid framing the opening around food, meals, eating behavior, or diet quality. Use neutral language: follow-through, consistency, execution reliability, behavioral stability.
+Help the user see the pattern in practical, everyday terms before suggesting anything.
+
+Focus on:
+- what kind of friction is most elevated
+- how that specific type of friction tends to disrupt consistency
+- how it usually shows up in real life
+
+Don't jump to routines, meal plans, or fixes yet.
+
+### Phase 2 — Diagnose the cause of that friction
+Ask 1–2 focused questions to understand why this friction exists for this specific person.
+You're trying to understand the cause, not just the symptom.
+
+For example:
+- what's driving the sleep instability? (PS)
+- what time do you typically get to sleep, and how variable is it? (PS)
+- what part of the day feels hardest to manage? (PSL)
+- what keeps disrupting the plan you had? (PSL)
+- when things go off track, what's usually happening around you?
+
+Skip questions that don't connect to the primary source of friction.
+
+### Phase 3 — Identify where things could shift at the source
+Once you have a clearer picture, point out 1–2 places where a practical change could ease the friction at its origin — not just manage effects further down the chain.
+Explain how addressing this would make the rest feel more manageable.
+Keep suggestions practical, not motivational.
+
+### Phase 4 — Build supporting structure
+Only after the primary source of friction is understood, introduce supporting structure if needed:
+- food environment design (only if EF is dominant)
+- sleep architecture or energy stabilization strategies (if PS is dominant)
+- cognitive load reduction, schedule simplification, or decision batching (if PSL is dominant)
+- fallback defaults for low-capacity days
+
+Food context should only enter the conversation if EF is dominant or the user explicitly connects their constraint to eating patterns.
+Let this emerge over several turns, not all in one response.
+
+### Conversation style
+Keep it concise. Keep it direct.
+Prefer short, conversational exchanges over long, comprehensive responses.
+Don't overwhelm with too many ideas early on.
+Ask questions with purpose — usually 1–4 across the whole conversation is enough.
+Once the picture is clear enough, move toward concrete, practical suggestions.
+Don't drift into theoretical fixes or complicated biology unless it directly reduces friction in practice.
+If addressing a body signal would add complexity, simplify instead.
+Things should feel more manageable even if sleep or energy aren't perfect yet.
+
+The point is not a perfect diet.
+The point is reducing friction so that consistent behavior becomes more automatic.
+Everything you suggest should still work when the user is tired, busy, interrupted, or just not feeling it.
+Something steady is better than something ideal but hard to keep up.
+
+---
+
+## Voice
+
+Speak like a calm, grounded coach — warm but not soft, curious but not probing, direct but not clinical.
+
+Use language like:
+- "It sounds like..."
+- "One thing that stands out..."
+- "That makes sense given..."
+- "Here's what I'd focus on first..."
+- "Let's see if we can make that easier..."
+- "This is where things might start to shift..."
+
+Do not use language like:
+- "key constraint"
+- "optimization lever"
+- "execution failure"
+- "primary bottleneck"
+- "suboptimal"
+- "caloric deficit"
+- "activation energy"
+- "unlock capacity"
+- "triage"
+- "adherence"
+- "root constraint"
+- any phrasing that sounds like a systems engineering report, consulting framework, or performance diagnostic
+
+Describe experiences rather than evaluate performance.
+Describe patterns rather than identify faults.
+Treat friction as something happening to the user, not something caused by the user.
+Be collaborative rather than directive.
+Be reflective rather than prescriptive.
+
+When reflecting back:
+1. Describe the pattern you see in plain, human terms.
+2. Normalize it — explain why it makes sense given the user's situation.
+3. Highlight what's reinforcing the difficulty.
+4. Offer a question or observation that moves toward something practical.
+5. Don't prescribe a fix until the picture is clear enough.
+
+The user should feel understood rather than evaluated.
+Clarity matters more than warmth. Don't add filler.
+
+---
+
+## Important Notes
+
+- This skill file was generated by the Dietary Destabilization Triangle assessment tool.
+- The scores and profile in "Current User Context" reflect the user's results at time of generation.
+- If the user's circumstances change, they should retake the assessment and update the context section above.
+- The app is the source of truth for classification. This file is the reusable reasoning layer.
+`;
+}
+
+function downloadSkillFile() {
+  const report = generateArchetypeReport(state);
+  const ef = computeEF(state);
+  const ps = computePS(state);
+  const psl = computePSL(state);
+  const composite = computeComposite(ef, ps, psl);
+
+  const scores = {
+    ef: ef.toFixed(0),
+    ps: ps.toFixed(0),
+    psl: psl.toFixed(0),
+    composite: composite.friction.toFixed(0),
+  };
+
+  const markdown = buildSkillFile(report, scores);
+  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+  const safeArchetype = report.archetypeName.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `friction-reduction-coach-${safeArchetype}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Button feedback
+  const btn = document.getElementById("download-skill-btn");
+  btn.textContent = "Downloaded!";
+  btn.style.background = "#5B8A72";
+  btn.style.borderColor = "#5B8A72";
+  setTimeout(() => {
+    btn.textContent = "Download Claude Skill (.md)";
+    btn.style.background = "#2F3E46";
+    btn.style.borderColor = "#2F3E46";
+  }, 2000);
+}
+
+function togglePreview(stateKey) {
+  const el = document.getElementById('preview_body_' + stateKey);
+  const arrow = document.getElementById('preview_arrow_' + stateKey);
+  if (state[stateKey]) {
+    el.style.display = 'none';
+    arrow.textContent = '▸';
+    state[stateKey] = false;
+  } else {
+    el.style.display = 'block';
+    arrow.textContent = '▾';
+    state[stateKey] = true;
+  }
+}
+
+function renderSectionPreview(label, score, color, stateKey) {
+  const zoneLabel = score <= 20 ? "Low Friction" : score <= 40 ? "Mild Friction" : score <= 60 ? "Moderate Friction" : score <= 80 ? "High Friction" : "Critical Friction";
+  const zoneColor = getAxisColor(score);
+  const pct = Math.min(score, 100);
+  const isOpen = state[stateKey];
+  return `
+    <div style="margin-top:12px; border:1px solid #e0e0e0; border-radius:8px; background:#fff; padding:0;">
+      <div onclick="togglePreview('${stateKey}')" style="font-size:13px; font-weight:600; color:${color}; cursor:pointer; padding:12px 16px; user-select:none;">
+        <span id="preview_arrow_${stateKey}" style="margin-right:6px;">${isOpen ? '▾' : '▸'}</span>Preview: ${label}
+      </div>
+      <div id="preview_body_${stateKey}" style="display:${isOpen ? 'block' : 'none'}; padding:4px 16px 16px;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+          <span style="font-size:13px; color:#1F2933;">${label}</span>
+          <span style="font-size:20px; font-weight:700; color:${zoneColor};">${score.toFixed(1)} <span style="font-size:12px; font-weight:400; color:#6B7280;">/ 100</span></span>
+        </div>
+        <div class="score-bar-track" style="margin-bottom:6px;">
+          <div class="score-bar-fill" style="width:${pct}%; background:${zoneColor};"></div>
+        </div>
+        <div style="font-size:12px; color:${zoneColor}; font-weight:600;">${zoneLabel}</div>
+        <div style="font-size:11px; color:#6B7280; margin-top:4px;">This is one axis of three — your full results combine all sections on the final page.</div>
+      </div>
+    </div>`;
+}
+
+function renderScoreBar(label, value, max, color) {
+  const pct = Math.min((value / max) * 100, 100);
+  return `<div class="score-bar">
+    <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
+      <span style="color:#1F2933;">${label}</span>
+      <span style="font-weight:600; color:${color};">${value.toFixed(1)} / ${max}</span>
+    </div>
+    <div class="score-bar-track">
+      <div class="score-bar-fill" style="width:${pct}%; background:${color};"></div>
+    </div>
+  </div>`;
+}
+
+// ============================================================
+// EVENT BINDING
+// ============================================================
+
+function goStep(n) {
+  state.step = n;
+  window.scrollTo(0, 0);
+  render();
+}
+
+function setLikert(key, val) {
+  state[key] = val;
+  render();
+}
+
+function setHungerTime(idx, val) {
+  ensureHungerPoints();
+  state.hungerPoints[idx].time = val;
+  render();
+}
+
+function setHungerIntensity(idx, val) {
+  ensureHungerPoints();
+  state.hungerPoints[idx].intensity = val;
+  render();
+}
+
+function ensureHungerPoints() {
+  const defaultTimes = ["early_morning", "mid_morning", "midday", "early_afternoon", "late_afternoon", "evening", "night", "late_night"];
+  while (state.hungerPoints.length < state.hungerCount) {
+    const idx = state.hungerPoints.length;
+    state.hungerPoints.push({ time: defaultTimes[idx % defaultTimes.length], intensity: "moderate" });
+  }
+  state.hungerPoints = state.hungerPoints.slice(0, state.hungerCount);
+}
+
+function bindEvents() {
+  // Selects and inputs with data-key
+  document.querySelectorAll("[data-key]").forEach(el => {
+    const key = el.dataset.key;
+    const type = el.dataset.type;
+    const eventType = el.tagName === "SELECT" ? "change" : "input";
+    el.addEventListener(eventType, (e) => {
+      let val = e.target.value;
+      if (type === "int") val = parseInt(val, 10);
+      else if (type === "float") val = parseFloat(val);
+      state[key] = val;
+
+      // Special: hunger count changed — sync hunger points
+      if (key === "hungerCount") {
+        ensureHungerPoints();
+      }
+
+      render();
+    });
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+render();
+</script>
+</body>
+</html>
